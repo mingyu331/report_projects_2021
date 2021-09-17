@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <title>RSA Encryption</title>
+        <script>
+            let p, q, n, totient, e, d, chunkSize;
+            let input, output;
+            let re;
+            const letterBitSize = BigInt(Math.log2(256));
+            const chunkSizeLimit = 512;
+            function gcd(a, b) {
+                let R;
+                if (a < b) {
+                    R = a; a = b; b = R;
+                }
+                while ((a % b) > 0) {
+                    R = a % b; a = b; b = R;
+                }
+                return b;
+            }
+            function modInverse(a, m) {
+                if (m == 1) {
+                    return 0;
+                }
+
+                let m0 = m, x = BigInt(1), y = BigInt(0);
+
+                while (a > 1) {
+                    let q = BigInt(a / m);
+                    let t = m;
+
+                    m = a % m; a = t; t = y;
+
+                    y = x - q * y; x = t;
+                }
+
+                if (x < 0) {
+                    x += m0;
+                }
+            
+                return x;
+            }
+            function PowerModulo(integer, modulo, power) {
+                let end_value = BigInt(1);
+                for (let i = 0; i < power; i++) {
+                    end_value = (end_value * integer) % modulo;
+                }
+                return end_value;
+            }
+            function CacheVariables() {
+                p = BigInt(document.getElementById('p').value);
+                q = BigInt(document.getElementById('q').value);
+                e = BigInt(document.getElementById('e').value);
+                n = p * q;
+                totient = (p - BigInt(1)) * (q - BigInt(1));
+                if (totient < 256) {
+                    alert("p or q is too small");
+                    return 0;
+                }
+                if (e == 0 || gcd(e, totient) != 1) {
+                    alert("incorrect E (choose 65537 if (p - 1)(q - 1) > 65537 or choose some prime)");
+                    return 0;
+                }
+                let i = BigInt(1);
+                while (totient >> i != 1) i++;
+                // i = Math.floor(Math.log2(totient))
+                chunkSize = i / BigInt(letterBitSize);
+                if (chunkSize > chunkSizeLimit) {
+                    chunkSize = chunkSizeLimit;
+                }
+                let k = 0;
+                d = modInverse(e, totient);
+                re = new RegExp("[^]{1," + Number(chunkSize) + "}", "g");
+                if (document.getElementById("input") == null) {
+                    console.log({p:p, q:q, n:n, totient:totient, e:e, d:d});
+                    let converter = document.getElementById('convert');
+                    let inputElement = document.createElement("textarea");
+                    inputElement.id = 'input'; inputElement.rows = "8"; inputElement.cols = "69";
+                    converter.appendChild(inputElement);
+                    converter.appendChild(document.createElement('br'));
+                    let encryptButton = document.createElement("button");
+                    encryptButton.onclick = encrypt;
+                    encryptButton.innerHTML = "Encrypt";
+                    converter.appendChild(encryptButton);
+                    let decryptButton = document.createElement("button");
+                    decryptButton.onclick = decrypt;
+                    decryptButton.innerHTML = "Decrypt";
+                    converter.appendChild(decryptButton);
+                    converter.appendChild(document.createElement("br"));
+                    let outputElement = document.createElement("div");
+                    outputElement.id = "output";
+                    converter.appendChild(outputElement);
+
+                    input = document.getElementById("input");
+                    output = document.getElementById("output");
+                }
+            }
+            function encrypt() {
+                let value = BigInt(input.value);
+                let valueArray = [];
+                while (value != 0) {
+                    valueArray.push(value % n);
+                    value /= n;
+                }
+                value = BigInt(0);
+                for (let idx = 0; idx < valueArray.length; idx++) {
+                    value = value * n;
+                    value += PowerModulo(valueArray[idx], n, e);
+                }
+                input.value = value;
+            }
+            function decrypt() {
+                let value = BigInt(input.value);
+                let valueArray = [];
+                while (value != 0) {
+                    valueArray.push(value % n);
+                    value /= n;
+                }
+                value = BigInt(0);
+                for (let idx = 0; idx < valueArray.length; idx++) {
+                    value = value * n;
+                    value += PowerModulo(valueArray[idx], n, d);
+                }
+                input.value = value;
+            }
+        </script>
+    </head>
+    <body>
+        <div style="display: inline-block;" id="cache_1">
+            P: <input id='p' value="2903"/>
+            Q: <input id='q' value="5179"/>
+            E: <input id="e" value="65537"/>
+            <button onclick="CacheVariables()">Cache</button>
+        </div>
+        <div id="convert"><br/></div>
+    </body>
+</html>
